@@ -36,7 +36,18 @@ public class Tile {
         if (isJoker) {
             return "JR";
         }
-        return val + color.substring(0, 1).toUpperCase();
+
+        // Prawidłowe mapowanie kolorów na jednoliterowe kody
+        String colorCode;
+        switch (color) {
+            case "red": colorCode = "R"; break;
+            case "blue": colorCode = "B"; break;
+            case "black": colorCode = "G"; break;  // Czarne karty używają kodu "G"
+            case "orange": colorCode = "O"; break;
+            default: colorCode = color.substring(0, 1).toUpperCase();
+        }
+
+        return val + colorCode;
     }
 
     @Override

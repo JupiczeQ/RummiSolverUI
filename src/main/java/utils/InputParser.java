@@ -44,7 +44,7 @@ public class InputParser {
         switch (colorCode.toUpperCase()) {
             case "R": color = "red"; break;
             case "B": color = "blue"; break;
-            case "G": color = "black"; break;
+            case "G": color = "black"; break;  // G oznacza czarne (German/Polish: Grun/Granat)
             case "O": color = "orange"; break;
             default: return null;
         }
