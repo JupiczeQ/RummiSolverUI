@@ -1,0 +1,147 @@
+/* Main application styles */
+.root {
+    -fx-font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    -fx-background-color: #F5F5F5;
+}
+
+/* Tile styles */
+.tile-view {
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 5, 0, 2, 2);
+    -fx-cursor: hand;
+}
+
+.tile-view:hover {
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.7), 8, 0, 3, 3);
+}
+
+/* Player hand styles */
+.hand-pane {
+    -fx-background-color: #E0E0E0;
+    -fx-border-color: #999;
+    -fx-border-width: 2;
+    -fx-border-radius: 5;
+}
+
+/* Table styles */
+.table-pane {
+    -fx-background-color: #537D8D;
+    -fx-border-color: #333;
+    -fx-border-width: 2;
+    -fx-border-radius: 5;
+}
+
+/* Group styles */
+.group-pane {
+    -fx-background-color: rgba(255,255,255,0.2);
+    -fx-border-color: #999;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-padding: 5;
+}
+
+.group-pane.empty {
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-border-style: dashed;
+    -fx-min-width: 250;
+    -fx-min-height: 70;
+}
+
+/* Button styles */
+.button {
+    -fx-background-color: #4682B4;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-padding: 8 15 8 15;
+    -fx-background-radius: 5;
+}
+
+.button:hover {
+    -fx-background-color: #5992C4;
+}
+
+.button:pressed {
+    -fx-background-color: #366994;
+}
+
+/* Label styles */
+.label {
+    -fx-text-fill: #333333;
+}
+
+/* Menu styles */
+.menu-bar {
+    -fx-background-color: #4682B4;
+}
+
+.menu-bar .label {
+    -fx-text-fill: white;
+}
+
+.menu-item {
+    -fx-background-color: white;
+}
+
+.menu-item .label {
+    -fx-text-fill: #333333;
+}
+
+.menu-item:focused {
+    -fx-background-color: #4682B4;
+}
+
+.menu-item:focused .label {
+    -fx-text-fill: white;
+}
+
+/* Dialog styles */
+.dialog-pane {
+    -fx-background-color: #F5F5F5;
+}
+
+.dialog-pane .header-panel {
+    -fx-background-color: #4682B4;
+}
+
+.dialog-pane .header-panel .label {
+    -fx-text-fill: white;
+}
+
+/* ScrollPane styles */
+.scroll-pane {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical,
+.scroll-bar:horizontal {
+    -fx-background-color: #E0E0E0;
+}
+
+.scroll-bar:vertical .thumb,
+.scroll-bar:horizontal .thumb {
+    -fx-background-color: #999;
+    -fx-background-radius: 5;
+}
+
+/* Score pane styles */
+.score-pane {
+    -fx-background-color: #E0E0E0;
+    -fx-border-color: #999;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+}
+
+/* Status label styles */
+.status-label {
+    -fx-font-style: italic;
+    -fx-text-fill: #555;
+}
+
+/* Selected tile styles */
+.tile-selected {
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,255,0.8), 10, 0, 0, 0);
+}
