@@ -29,6 +29,8 @@ public class RummikubSolver extends Application {
     private Label statusLabel;
     private Button suggestMoveButton;
     private TilePool tilePool;
+    private int humanPlayerIndex;
+    private int nextPlayerIndex;
 
     @Override
     public void start(Stage primaryStage) {
@@ -109,6 +111,7 @@ public class RummikubSolver extends Application {
     }
 
     private void setupGame() {
+
         // Create dialog for game setup
         Dialog<GameSettings> setupDialog = new Dialog<>();
         setupDialog.setTitle("Rummikub Solver Setup");
@@ -238,9 +241,12 @@ public class RummikubSolver extends Application {
         result.ifPresent(settings -> {
             // Initialize game state with the settings
             gameState = new GameState(settings.getPlayerCount());
-            gameState.setCurrentPlayerIndex(settings.getPlayerTurnIndex());
+            // Save the human player index based on the player selected in setup
+            humanPlayerIndex = settings.getPlayerTurnIndex();
+            // Set the current player to the first player in the game sequence
+            gameState.setCurrentPlayerIndex(0); // Always start with Player 1
 
-            // Parse and add initial tiles to player's hand using our fixed parser
+            // Parse and add initial tiles to the human player's hand
             List<Tile> initialTiles = new ArrayList<>();
 
             // Parse the input string
@@ -251,10 +257,10 @@ public class RummikubSolver extends Application {
 
             if (initialTiles.isEmpty()) {
                 // If no valid tiles are provided, add some default tiles
-                addDefaultTiles();
+                addDefaultTilesToHumanPlayer();
             } else {
                 for (Tile tile : initialTiles) {
-                    gameState.getCurrentPlayer().addTile(tile);
+                    gameState.getPlayer(humanPlayerIndex).addTile(tile);
                 }
             }
         });
@@ -264,6 +270,17 @@ public class RummikubSolver extends Application {
             gameState = new GameState(2);
             gameState.setCurrentPlayerIndex(0);
             addDefaultTiles();
+        }
+    }
+
+    private void addDefaultTilesToHumanPlayer() {
+        // Add 14 random tiles to the human player's hand
+        Player player = gameState.getPlayer(humanPlayerIndex);
+        for (int i = 0; i < 14; i++) {
+            Tile tile = tilePool.drawTile();
+            if (tile != null) {
+                player.addTile(tile);
+            }
         }
     }
 
@@ -290,10 +307,18 @@ public class RummikubSolver extends Application {
         suggestMoveButton = new Button("Suggest Best Move");
         suggestMoveButton.setMaxWidth(Double.MAX_VALUE);
         suggestMoveButton.setOnAction(e -> suggestBestMove());
+        // Only enable if it's the human player's turn
+        suggestMoveButton.setDisable(gameState.getCurrentPlayerIndex() != humanPlayerIndex);
 
         Button endTurnButton = new Button("End Turn");
         endTurnButton.setMaxWidth(Double.MAX_VALUE);
         endTurnButton.setOnAction(e -> endTurn());
+
+        // Disable end turn button if it's the first move
+        if (gameState.isFirstMove()) {
+            endTurnButton.setDisable(true);
+            endTurnButton.setTooltip(new Tooltip("You must first play tiles worth at least 30 points"));
+        }
 
         Button drawTileButton = new Button("Draw Tile");
         drawTileButton.setMaxWidth(Double.MAX_VALUE);
@@ -306,6 +331,8 @@ public class RummikubSolver extends Application {
         Button otherPlayerMovedButton = new Button("Other Player Moved");
         otherPlayerMovedButton.setMaxWidth(Double.MAX_VALUE);
         otherPlayerMovedButton.setOnAction(e -> handleOtherPlayerMove());
+        // Only enable if it's NOT the human player's turn
+        otherPlayerMovedButton.setDisable(gameState.getCurrentPlayerIndex() == humanPlayerIndex);
 
         Button resetBoardButton = new Button("Reset Game");
         resetBoardButton.setMaxWidth(Double.MAX_VALUE);
@@ -399,6 +426,9 @@ public class RummikubSolver extends Application {
             applyMove(move);
             statusLabel.setText("Applied suggested move: " + move.tilesPlayedCount() + " tiles played.");
 
+            // Update the UI to reflect changes, particularly button states
+            updateUI();
+
             // Check for win condition
             checkWinCondition();
         });
@@ -449,13 +479,21 @@ public class RummikubSolver extends Application {
         // Update table with new groups
         gameState.getTable().replaceGroups(move.getResultingGroups());
 
+        // If this was the first move and meets requirements, mark it as done
+        if (gameState.isFirstMove()) {
+            ScoreCalculator calculator = new ScoreCalculator();
+            int moveValue = calculator.calculateTotalValue(move.getResultingGroups());
+
+            if (moveValue >= 30) {
+                gameState.setFirstMoveDone();
+                statusLabel.setText("First move played successfully! Value: " + moveValue + " points.");
+            } else {
+                statusLabel.setText("First move played. Value: " + moveValue + " points (need 30+ to end turn).");
+            }
+        }
+
         // Update UI
         updateUI();
-
-        // If this was the first move, mark it as done
-        if (gameState.isFirstMove()) {
-            gameState.setFirstMoveDone();
-        }
 
         // Check for win condition
         checkWinCondition();
@@ -490,7 +528,7 @@ public class RummikubSolver extends Application {
                     alert.setHeaderText(null);
                     alert.setContentText("Your first move must be worth at least 30 points. " +
                             "Current value: " + playedTilesValue + " points.\n\n" +
-                            "Use the 'Suggest Best Move' button to get help finding a valid opening move.");
+                            "Use the 'Suggest Best Move' button to find a valid opening move.");
                     alert.showAndWait();
 
                     return;
@@ -523,18 +561,23 @@ public class RummikubSolver extends Application {
         // Move to next player
         gameState.nextPlayer();
 
+        // Calculate the next player index for status updates
+        int nextPlayerIndex = gameState.getCurrentPlayerIndex();
+
         // Clear played tiles tracking
         tablePane.clearPlayedTiles();
 
-        statusLabel.setText("Turn ended. Now it's Player " + (gameState.getCurrentPlayerIndex() + 1) + "'s turn.");
+        if (nextPlayerIndex == humanPlayerIndex) {
+            statusLabel.setText("Turn ended. Now it's your turn.");
+        } else {
+            statusLabel.setText("Turn ended. Now it's Player " + (nextPlayerIndex + 1) + "'s turn.");
+        }
 
         // Update UI
         updateUI();
 
-        // Check if we need to simulate other players' moves
-        if (gameState.getCurrentPlayerIndex() != 0) {  // Not the human player
-            // In a real implementation, you would have AI logic here
-            // For simplicity, we'll just provide a button to simulate the move
+        // If not human player's turn, disable suggest button
+        if (gameState.getCurrentPlayerIndex() != humanPlayerIndex) {
             suggestMoveButton.setDisable(true);
             statusLabel.setText("Waiting for Player " + (gameState.getCurrentPlayerIndex() + 1) +
                     " to complete their turn. Click 'Other Player Moved' when ready.");
@@ -553,9 +596,9 @@ public class RummikubSolver extends Application {
     }
 
     private void handleOtherPlayerMove() {
-        if (gameState.getCurrentPlayerIndex() == 0) {
-            // It's the human player's turn, no need to handle other player move
-            statusLabel.setText("It's your turn now.");
+        if (gameState.getCurrentPlayerIndex() == humanPlayerIndex) {
+            // It's your turn, no need to handle other player's move
+            statusLabel.setText("It's your turn.");
             return;
         }
 
@@ -570,7 +613,7 @@ public class RummikubSolver extends Application {
         VBox content = new VBox(10);
         content.setPadding(new Insets(20, 10, 10, 10));
 
-        // Add radio button to specify if player laid tiles
+        // Add player action selection
         ToggleGroup actionGroup = new ToggleGroup();
         RadioButton layTilesRadio = new RadioButton("Player laid tiles on the table");
         layTilesRadio.setToggleGroup(actionGroup);
@@ -613,7 +656,6 @@ public class RummikubSolver extends Application {
         // Process dialog result
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == doneButtonType) {
-                // Return the selected action
                 return layTilesRadio.isSelected() ? "laid_tiles" : "drew_tile";
             }
             return null;
@@ -621,20 +663,30 @@ public class RummikubSolver extends Application {
 
         Optional<String> result = dialog.showAndWait();
 
-        // Move to next player's turn
+        // Move to next turn - THIS IS THE CRITICAL PART THAT NEEDS FIXING
         if (result.isPresent()) {
-            // Move to next player without clearing human player's hand
-            gameState.nextPlayer();
+            // Advance to the next player (which should be the human player)
+            int nextPlayerIndex = (gameState.getCurrentPlayerIndex() + 1) % gameState.getAllPlayers().size();
+            gameState.setCurrentPlayerIndex(nextPlayerIndex);
+
+            // Make sure UI is updated
             updateUI();
 
-            // Check if we're back to the human player
-            if (gameState.getCurrentPlayerIndex() == 0) {
-                statusLabel.setText("It's your turn now.");
+            // Update status message
+            if (nextPlayerIndex == humanPlayerIndex) {
+                statusLabel.setText("Now it's your turn.");
+                // Make sure suggest button is enabled
                 suggestMoveButton.setDisable(false);
             } else {
-                statusLabel.setText("Waiting for Player " + (gameState.getCurrentPlayerIndex() + 1) +
-                        " to complete their turn. Click 'Other Player Moved' when ready.");
+                statusLabel.setText("Now it's Player " + (nextPlayerIndex + 1) + "'s turn.");
+                // If it's not the human player, disable suggest button
+                suggestMoveButton.setDisable(true);
             }
+
+            // Debug information to help track the player transition
+            System.out.println("Player transition: Current player index is now " +
+                    gameState.getCurrentPlayerIndex() +
+                    ", Human player index is " + humanPlayerIndex);
         }
     }
 
@@ -667,7 +719,7 @@ public class RummikubSolver extends Application {
         dialog.setTitle("Draw a Tile");
 
         // Show dialog and wait for result
-        java.util.Optional<Tile> result = dialog.showAndWait();
+        Optional<Tile> result = dialog.showAndWait();
 
         if (result.isPresent()) {
             // User selected a specific tile
@@ -697,12 +749,34 @@ public class RummikubSolver extends Application {
 
         // Update UI
         updateUI();
+
+        // After drawing a tile, move to next player
+        gameState.nextPlayer();
+
+        // Calculate next player index
+        nextPlayerIndex = gameState.getCurrentPlayerIndex();
+
+        updateUI();
+
+        // Update status based on whose turn it is next
+        if (nextPlayerIndex == humanPlayerIndex) {
+            statusLabel.setText("Drew a tile. Now it's your turn.");
+        } else {
+            statusLabel.setText("Drew a tile. Now it's Player " + (nextPlayerIndex + 1) + "'s turn.");
+        }
+
+        // If we switched to another player, update suggest button
+        if (gameState.getCurrentPlayerIndex() != humanPlayerIndex) {
+            suggestMoveButton.setDisable(true);
+            statusLabel.setText("Waiting for Player " + (gameState.getCurrentPlayerIndex() + 1) +
+                    " to complete their turn. Click 'Other Player Moved' when ready.");
+        } else {
+            suggestMoveButton.setDisable(false);
+        }
     }
 
     private void undoMove() {
-        // Implement move history and undo functionality
-        // For simplicity, we'll just put back any tiles that were played this turn
-
+        // Get tiles that were played this turn
         List<Tile> playedTiles = tablePane.getPlayedTiles();
 
         if (playedTiles.isEmpty()) {
@@ -785,8 +859,8 @@ public class RummikubSolver extends Application {
     }
 
     private void updateUI() {
-        // Update player hand display
-        playerHandPane.updateHand(gameState.getCurrentPlayer().getHand());
+        // Update player hand display - always show the human player's hand
+        playerHandPane.updateHand(gameState.getPlayer(humanPlayerIndex).getHand());
 
         // Update table display
         tablePane.updateTable(gameState.getTable());
@@ -794,7 +868,48 @@ public class RummikubSolver extends Application {
         // Update score pane
         scorePane.updateScores(gameState);
 
-        // Get the top of the center panel which should contain our status panel
+        // Check if it's the human player's turn
+        boolean isHumanTurn = gameState.getCurrentPlayerIndex() == humanPlayerIndex;
+
+        // Debug print to verify turn state
+        System.out.println("UI Update: Current player=" + gameState.getCurrentPlayerIndex() +
+                ", Human player=" + humanPlayerIndex +
+                ", isHumanTurn=" + isHumanTurn);
+
+        // Update button states directly
+        if (suggestMoveButton != null) {
+            suggestMoveButton.setDisable(!isHumanTurn);
+        }
+
+        // Find and update the other buttons
+        try {
+            VBox controlPanel = (VBox)((BorderPane)((Scene)tablePane.getScene()).getRoot()).getRight();
+            for (javafx.scene.Node node : controlPanel.getChildren()) {
+                if (node instanceof Button) {
+                    Button button = (Button)node;
+
+                    if (button.getText().equals("Other Player Moved")) {
+                        button.setDisable(isHumanTurn);
+                        System.out.println("Set 'Other Player Moved' button disabled: " + isHumanTurn);
+                    } else if (button.getText().equals("End Turn")) {
+                        boolean disableEndTurn = !isHumanTurn;
+
+                        // Only apply first move restriction if needed
+                        if (isHumanTurn && gameState.isFirstMove() && !gameState.getTable().isEmpty()) {
+                            int tableValue = checkFirstMoveValue();
+                            disableEndTurn = tableValue < 30;
+                        }
+
+                        button.setDisable(disableEndTurn);
+                        System.out.println("Set 'End Turn' button disabled: " + disableEndTurn);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error updating button states: " + e.getMessage());
+        }
+
+        // Update status panel
         if (tablePane.getScene() != null) {
             try {
                 HBox statusPanel = (HBox) ((BorderPane)((BorderPane)((Scene)tablePane.getScene()).getRoot()).getCenter()).getTop();
@@ -804,15 +919,8 @@ public class RummikubSolver extends Application {
                     updateStatusPanel(playerTurnLabel, firstMoveLabel);
                 }
             } catch (Exception e) {
-                // If we can't find the status panel yet, that's okay
-                // This can happen during initialization
                 System.out.println("Status panel not accessible yet: " + e.getMessage());
             }
-        }
-
-        // Update the control panel buttons based on whose turn it is
-        if (suggestMoveButton != null) {
-            suggestMoveButton.setDisable(gameState.getCurrentPlayerIndex() != 0);
         }
     }
 
